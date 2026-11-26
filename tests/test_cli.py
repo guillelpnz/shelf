@@ -33,6 +33,40 @@ class ListCommandTest(ShelfTestCase):
             "#2 [reading] Kindred by Octavia E. Butler",
         ])
 
+    def test_status_filters_the_list(self):
+        self.shelf("add", "Dune", "Frank Herbert")
+        self.shelf("add", "Kindred", "Octavia E. Butler", "--status", "reading")
+        self.shelf("add", "Piranesi", "Susanna Clarke", "--status", "reading")
+
+        result = self.shelf("list", "--status", "reading")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.splitlines(), [
+            "#2 [reading] Kindred by Octavia E. Butler",
+            "#3 [reading] Piranesi by Susanna Clarke",
+        ])
+
+    def test_no_matches_prints_a_message(self):
+        self.shelf("add", "Dune", "Frank Herbert")
+
+        result = self.shelf("list", "--status", "done")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "No books with status done.\n")
+
+    def test_status_on_an_empty_shelf_prints_the_filter_message(self):
+        result = self.shelf("list", "--status", "reading")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "No books with status reading.\n")
+
+    def test_an_invalid_status_is_a_usage_error(self):
+        result = self.shelf("list", "--status", "paused")
+
+        self.assertEqual(result.returncode, 2)
+        for status in ("to-read", "reading", "done"):
+            self.assertIn(status, result.stderr)
+
 
 class StartAndFinishCommandTest(ShelfTestCase):
     def test_start_then_finish_a_book(self):
